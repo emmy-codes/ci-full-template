@@ -1,10 +1,12 @@
 from django.test import TestCase
 from .models import Item
+from django.urls import reverse
 
 # Create your tests here.
 
 
 class TestViews(TestCase):
+
     def test_get_todo_list(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -15,9 +17,17 @@ class TestViews(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "todo/add_item.html")
 
+
     def test_get_edit_item_page(self):
-        item = Item.objects.create(name="Test Todo Item")
-        response = self.client.get(f"/edit/{item.id}")
+        # Create the item using the provided URL for item creation
+        response = self.client.post(reverse("add_item"), {"name": "Test Todo Item"})
+        self.assertRedirects(response, reverse("get_todo_list"))
+
+        # Retrieve the created item from the database
+        item = Item.objects.get(name="Test Todo Item")
+
+        # Attempt to edit the item (you may need to adjust this based on your actual edit view URL)
+        response = self.client.get(reverse("edit_item", args=[item.id]))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "todo/edit_item.html")
 
@@ -26,9 +36,18 @@ class TestViews(TestCase):
         self.assertRedirects(response, "/")
 
     def test_can_delete_item(self):
-        item = Item.objects.create(name="Test Todo Item")
-        response = self.client.get(f"/delete/{item.id}")
-        self.assertRedirects(response, "/")
+        # Create the item using the provided URL for item creation
+        response = self.client.post(reverse("add_item"), {"name": "Test Todo Item"})
+        self.assertRedirects(response, reverse("get_todo_list"))
+
+        # Retrieve the created item from the database
+        item = Item.objects.get(name="Test Todo Item")
+
+        # Attempt to delete the item
+        response = self.client.get(reverse("delete_item", args=[item.id]))
+        self.assertRedirects(response, reverse("get_todo_list"))
+
+        # Verify that the item has been deleted from the database
         existing_items = Item.objects.filter(id=item.id)
         self.assertEqual(len(existing_items), 0)
 
